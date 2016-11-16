@@ -1,0 +1,6 @@
+name = PUM Webform Select list as Submit Button
+description = Transform a select list to individual submit buttons on a webform.
+core = 7.x
+package = PUM
+version = "7.x-1.0"
+dependencies[] = webform (>=4.0-beta1)

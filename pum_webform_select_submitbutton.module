@@ -1,0 +1,105 @@
+<?php
+/**
+ * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
+ * @license http://www.gnu.org/licenses/agpl-3.0.html
+ */
+
+/**
+ * Implements hook_form_webform_component_edit_form_alter().
+ *
+ * Add a checkbox to the select fields to display as submit button.
+ *
+ * @param $form
+ * @param $form_state
+ */
+function pum_webform_select_submitbutton_form_webform_component_edit_form_alter(&$form, &$form_state) {
+  $component = $form_state['build_info']['args'][1];
+  if (!in_array($component['type'], array('select'))) {
+    return;
+  }
+
+  $form['display']['pum_webform_select_submitbutton_enabled'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display as submit buttons'),
+    '#description' => t("The options are displayed as submit buttons instead of a select list."),
+    '#weight' => 0,
+    '#default_value' => !empty($component['extra']['pum_webform_select_submitbutton_enabled']) ? true : false,
+  );
+}
+
+/**
+ * Implements webform_component_presave().
+ *
+ * Store the enable/disable state of the display as submit button.
+ *
+ * @param $component
+ */
+function pum_webform_select_submitbutton_webform_component_presave(&$component) {
+  if (!in_array($component['type'], array('select'))) {
+    return;
+  }
+  $component['extra']['pum_webform_select_submitbutton_enabled'] = !empty($component['display']['pum_webform_select_submitbutton_enabled']) ? true : false;
+}
+
+/**
+ * Implements form_alter().
+ *
+ * Alter the webform and find any select button and display those as submit buttons.
+ *
+ * @param $form
+ * @param $form_state
+ * @param $form_id
+ */
+function pum_webform_select_submitbutton_form_alter(&$form, &$form_state, $form_id) {
+  if (stripos($form_id, 'webform_client_form_') === 0 && isset($form['submitted'])) {
+    _pum_webform_select_submitbutton_form_alter_check_webform_element($form, $form_state, $form['submitted']);
+  }
+}
+
+/**
+ * Loop through all elements and check whether a dropdown list should be converted
+ * to a set of submit buttons.
+ *
+ * @param $form
+ * @param $form_state
+ * @param $elements
+ */
+function _pum_webform_select_submitbutton_form_alter_check_webform_element(&$form, &$form_state, &$elements) {
+  foreach($elements as $form_key => $element) {
+    if (!is_array($element) || !isset($element['#webform_component'])) {
+      continue;
+    }
+    $component = $element['#webform_component'];
+    if (!empty($component['extra']['pum_webform_select_submitbutton_enabled'])) {
+      $actions = $form['actions'];
+      unset($form['actions']);
+      $elements['actions'] = $actions;
+      $elements['actions']['#weight'] = 0;
+      unset($elements['actions']['submit']);
+
+      $elements[$form_key]['#type'] = 'hidden';
+      unset($elements[$form_key]['#title']);
+      $elements[$form_key]['#attributes']['class'][] = 'hidden_'.$form_key;
+      foreach($element['#options'] as $val => $label) {
+        $elements['actions'][$val]['#type'] = 'submit';
+        $elements['actions'][$val]['#value'] = $label;
+        $elements['actions'][$val]['#attributes'] = array(
+          'onclick' => "jQuery('.hidden_{$form_key}').val('{$val}');",
+          'class' => array($val)
+        );
+
+        if (isset($form_state['input']['op']) && $form_state['input']['op'] == $label) {
+          /* This is a little trick to make sure the webform gets processed after
+           * the button is pressed.
+           *
+           * The webform module looks up the label of the submit button and only
+           * when a button with the exact label is pressed then submission is
+           * handled. So we change the label to the label of the pressed button.
+           */
+          $form['actions']['submit']['#value'] = $label;
+        }
+      }
+    }
+    _pum_webform_select_submitbutton_form_alter_check_webform_element($form, $form_state, $elements[$form_key]);
+  }
+}
