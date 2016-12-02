@@ -74,7 +74,9 @@ function _pum_webform_select_submitbutton_form_alter_check_webform_element(&$for
       $actions = $form['actions'];
       unset($form['actions']);
       $elements['actions'] = $actions;
-      $elements['actions']['#weight'] = 0;
+      if (isset($elements[$form_key]['#weight'])) {
+        $elements['actions']['#weight'] = $elements[$form_key]['#weight'];
+      }
       unset($elements['actions']['submit']);
 
       $elements[$form_key]['#type'] = 'hidden';
