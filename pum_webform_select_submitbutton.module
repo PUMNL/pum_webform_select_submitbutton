@@ -56,6 +56,23 @@ function pum_webform_select_submitbutton_form_alter(&$form, &$form_state, $form_
   }
 }
 
+function pum_webform_select_submitbutton_webform_submission_presave($node, &$submission) {
+  // When a select is converted to buttons. Then drupal will issue a warning
+  // after submitting the webform. This is caused by having the options of the select
+  // as a subkit value so we unset the value.
+  foreach($node->webform['components'] as $cid => $component) {
+    if (!empty($component['extra']['pum_webform_select_submitbutton_enabled'])) {
+      foreach($submission->data as $cid => $values) {
+        foreach($values as $value) {
+          if (is_array($value)) {
+            unset($submission->data[$cid]);
+          }
+        }
+      }
+    }
+  }
+}
+
 /**
  * Loop through all elements and check whether a dropdown list should be converted
  * to a set of submit buttons.
